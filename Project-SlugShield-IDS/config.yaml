@@ -1,0 +1,11 @@
+# Which network interface to sniff on-> for now, auto
+interface: lo0
+
+# Sliding window used for counting packets
+window_seconds: 10
+
+# Threshold to trigger ICMP alert within the window_seconds timeframe
+icmp_threshold_per_window: 500
+
+# Threshold for ARP spoofing detection - how many MAC address changes trigger an alert
+arp_mac_change_threshold: 3
