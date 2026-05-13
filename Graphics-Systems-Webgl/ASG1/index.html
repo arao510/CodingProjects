@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Assignment 1 - Paint (Part 1)</title>
+</head>
+
+<body onload="main()">
+  <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+  </canvas>
+
+  <div style="margin-top: 10px;">
+    <label>Red</label>
+    <input type="range" id="redSlide" min="0" max="100" value="100">
+    <br>
+
+    <label>Green</label>
+    <input type="range" id="greenSlide" min="0" max="100" value="0">
+    <br>
+
+    <label>Blue</label>
+    <input type="range" id="blueSlide" min="0" max="100" value="0">
+  </div>
+
+
+
+  <div style="margin-top: 10px;">
+    <label>Size</label>
+    <input type="range" id="sizeSlide" min="1" max="40" value="10">
+    <span id="sizeText">10</span>
+    <br><br>
+
+    <button id="clearButton">Clear Canvas</button>
+  </div>
+
+
+
+
+  <div style="margin-top: 10px;">
+    <button id="pointButton">Point</button>
+    <button id="triButton">Triangle</button>
+    <button id="circleButton">Circle</button>
+  </div>
+  
+  <div style="margin-top: 10px;">
+    <label>Circle Segments</label>
+    <input type="range" id="segmentsSlide" min="3" max="50" value="12">
+    <span id="segmentsText">12</span>
+  </div>
+  
+  <div style="margin-top: 10px;">
+    <button id="drawPictureButton">Draw Picture</button>
+  </div>
+  
+  <!-- Later you will replace sketch.jpg with your actual phone photo filename -->
+  <div style="margin-top: 10px;">
+    <p>Sketch Reference:</p>
+    <img id="sketchImage" src="sketch.png" alt="My sketch reference" width="400">
+  </div>
+  
+
+
+  <script src="lib/webgl-utils.js"></script>
+  <script src="lib/webgl-debug.js"></script>
+  <script src="lib/cuon-utils.js"></script>
+
+  <script src="Triangle.js"></script>
+  <script src="Circle.js"></script>
+  
+
+  <!-- Load the painting code (NOT HelloPoint1.js) -->
+  <script src="ColoredPoints.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ASG0</title>
+</head>
+
+<body onload="main()">
+  <canvas id="example" width="400" height="400">
+    Please use a browser that supports canvas
+  </canvas>
+
+  <br>
+
+  v1: x
+  <input id="v1x" type="text" value="0" size="3">
+  y
+  <input id="v1y" type="text" value="5" size="3">
+  <br>
+
+  v2: x
+  <input id="v2x" type="text" value="5" size="3">
+  y
+  <input id="v2y" type="text" value="0" size="3">
+  <br>
+
+  <input id="drawButton" type="button" value="Draw">
+
+  <br><br>
+
+  Operation:
+  <select id="opSelect">
+    <option value="add">Add</option>
+    <option value="sub">Sub</option>
+    <option value="mul">Multiply</option>
+    <option value="div">Divide</option>
+    <option value="mag">Magnitude</option>
+    <option value="norm">Normalize</option>
+    <option value="angle">Angle between</option>
+    <option value="area">Area</option>
+  </select>
+
+  Scalar:
+  <input id="scalarInput" type="text" value="2" size="3">
+
+  <input id="opDrawButton" type="button" value="Draw">
+
+  <!-- Matrix library -->
+  <script src="lib/cuon-matrix-cse160.js"></script>
+  <!-- Your code -->
+  <script src="asg0.js"></script>
+</body>
+</html>

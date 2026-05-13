@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<div style="position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: #666;">
+  Name: Asaveri Rao<br>
+  Email: arao23@ucsc.edu
+</div>
+<html>
+<head>
+    <title>RESCUE THE KOALAS!</title>
+    <style>
+        body { margin: 0; background-color: #111; }
+        canvas { display: block; margin: 20px auto; border: 3px solid #0f0; }
+        h1 { color: #0f0; text-align: center; font-family: monospace; margin: 20px; }
+        .info { color: #fff; text-align: center; margin: 10px; font-family: monospace; }
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #0f0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            font-family: monospace;
+            border: 2px solid #0f0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>RESCUE THE KOALAS!</h1>
+    <div class="info">
+        <strong>MISSION:</strong> Escape the red mob and rescue 5 cute koalas!<br>
+        Controls: W/A/S/D - Move | Q/E - Turn | Mouse - Look (Click canvas)<br>
+        <strong>X - Place Wall | Z - Delete Wall</strong> (Build barriers to escape!)
+    </div>
+    
+    <div id="hud">
+        RESCUE THE KOALAS!<br>
+        Time: 0.0s<br>
+        Koalas saved: 0 / 5<br>
+        Distance: --
+    </div>
+    
+    <canvas id="webgl" width="800" height="600"></canvas>
+    
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix-cse160.js"></script>
+    
+    <script>
+        // ========== PYRAMID BUFFER ==========
+        let g_pyrVBO = null;
+        let g_pyrVertCount = 0;
+        
+        function initPyramidBuffer() {
+          const v = new Float32Array([
+            // Front face
+            0,0,0,  1,0,0,  0.5,1,0.5,
+            // Right face
+            1,0,0,  1,0,1,  0.5,1,0.5,
+            // Back face
+            1,0,1,  0,0,1,  0.5,1,0.5,
+            // Left face
+            0,0,1,  0,0,0,  0.5,1,0.5,
+            // Base tri 1
+            0,0,0,  1,0,1,  1,0,0,
+            // Base tri 2
+            0,0,0,  0,0,1,  1,0,1
+          ]);
+        
+          g_pyrVertCount = 18;
+          g_pyrVBO = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, g_pyrVBO);
+          gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
+        }
+        
+        function drawPyramid(M, color) {
+          gl.uniformMatrix4fv(u_ModelMatrix, false, M.elements);
+          gl.uniform1i(u_WhichTexture, -1);
+          gl.uniform4f(u_Color, color[0], color[1], color[2], color[3]);
+        
+          gl.bindBuffer(gl.ARRAY_BUFFER, g_pyrVBO);
+          gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(a_Position);
+          gl.drawArrays(gl.TRIANGLES, 0, g_pyrVertCount);
+        }
+        
+        // ========== SPHERE BUFFER ==========
+        let g_sphereVBO = null;
+        let g_sphereVertCount = 0;
+        
+        function initSphereBuffer() {
+          const latBands = 16, lonBands = 16;
+          const verts = [];
+          const r = 0.5;
+        
+          for (let lat = 0; lat < latBands; lat++) {
+            const theta1 = (lat / latBands) * Math.PI;
+            const theta2 = ((lat + 1) / latBands) * Math.PI;
+            const sinT1 = Math.sin(theta1), cosT1 = Math.cos(theta1);
+            const sinT2 = Math.sin(theta2), cosT2 = Math.cos(theta2);
+        
+            for (let lon = 0; lon < lonBands; lon++) {
+              const phi1 = (lon / lonBands) * Math.PI * 2;
+              const phi2 = ((lon + 1) / lonBands) * Math.PI * 2;
+              const sinP1 = Math.sin(phi1), cosP1 = Math.cos(phi1);
+              const sinP2 = Math.sin(phi2), cosP2 = Math.cos(phi2);
+        
+              const p00 = [r*sinT1*cosP1, r*cosT1, r*sinT1*sinP1];
+              const p10 = [r*sinT1*cosP2, r*cosT1, r*sinT1*sinP2];
+              const p01 = [r*sinT2*cosP1, r*cosT2, r*sinT2*sinP1];
+              const p11 = [r*sinT2*cosP2, r*cosT2, r*sinT2*sinP2];
+        
+              verts.push(p00[0],p00[1],p00[2]);
+              verts.push(p10[0],p10[1],p10[2]);
+              verts.push(p01[0],p01[1],p01[2]);
+              verts.push(p10[0],p10[1],p10[2]);
+              verts.push(p11[0],p11[1],p11[2]);
+              verts.push(p01[0],p01[1],p01[2]);
+            }
+          }
+        
+          const v = new Float32Array(verts);
+          g_sphereVertCount = v.length / 3;
+        
+          g_sphereVBO = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, g_sphereVBO);
+          gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
+        }
+        
+        function drawSphere(M, color) {
+          gl.uniformMatrix4fv(u_ModelMatrix, false, M.elements);
+          gl.uniform1i(u_WhichTexture, -1);
+          gl.uniform4f(u_Color, color[0], color[1], color[2], color[3]);
+        
+          gl.bindBuffer(gl.ARRAY_BUFFER, g_sphereVBO);
+          gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(a_Position);
+          gl.drawArrays(gl.TRIANGLES, 0, g_sphereVertCount);
+        }
+        
+        // ========== CENTER-BASED POSITIONING - TRULY CONNECTED! ==========
+        function renderKoala(x, y, z, rotation) {
+          const TAN = [0.85, 0.75, 0.65, 1.0];
+          const GRAY = [0.6, 0.6, 0.6, 1.0];
+          const DARK = [0.15, 0.15, 0.15, 1.0];
+          const PINK = [0.95, 0.7, 0.75, 1.0];
+          
+          const base = new Matrix4();
+          base.setTranslate(x, y, z);
+          base.rotate(rotation, 0, 1, 0);
+          base.scale(0.6, 0.6, 0.6);
+          
+          // CENTER = 0.25, 0.5, 0.2 for the whole creature
+          
+          // === BODY (center piece) ===
+          // Center: (0.25, 0.5, 0.2), Scale: (0.5, 0.6, 0.4)
+          // Extends: X: 0 to 0.5, Y: 0.2 to 0.8, Z: 0 to 0.4
+          let body = new Matrix4(base);
+          body.translate(0.25, 0.5, 0.2);
+          body.scale(0.5, 0.6, 0.4);
+          renderCube(0, 0, 0, -1, body, GRAY);
+          
+          // === HEAD (on top of body) ===
+          // Center: (0.25, 0.95, 0.2), Scale: (0.4, 0.4, 0.35)
+          // Extends: X: 0.05 to 0.45, Y: 0.75 to 1.15, Z: 0.025 to 0.375
+          // Overlaps body Y: 0.75 to 0.8 ✓
+          let head = new Matrix4(base);
+          head.translate(0.25, 0.95, 0.2);
+          head.scale(0.4, 0.4, 0.35);
+          renderCube(0, 0, 0, -1, head, TAN);
+          
+          // === EARS ===
+          // Left ear center: (0.1, 1.25, 0.2)
+          let earL = new Matrix4(base);
+          earL.translate(0.1, 1.25, 0.2);
+          earL.scale(0.12, 0.2, 0.12);
+          renderCube(0, 0, 0, -1, earL, TAN);
+          
+          // Right ear center: (0.4, 1.25, 0.2)
+          let earR = new Matrix4(base);
+          earR.translate(0.4, 1.25, 0.2);
+          earR.scale(0.12, 0.2, 0.12);
+          renderCube(0, 0, 0, -1, earR, TAN);
+          
+          // === EAR PINK CENTERS ===
+          let earLi = new Matrix4(base);
+          earLi.translate(0.1, 1.25, 0.25);
+          earLi.scale(0.06, 0.1, 0.08);
+          renderCube(0, 0, 0, -1, earLi, PINK);
+          
+          let earRi = new Matrix4(base);
+          earRi.translate(0.4, 1.25, 0.25);
+          earRi.scale(0.06, 0.1, 0.08);
+          renderCube(0, 0, 0, -1, earRi, PINK);
+          
+          // === EYES (stick out from front of face) ===
+          // Head front is at Z = 0.375, put eyes at Z = 0.4 to stick out!
+          let eyeL = new Matrix4(base);
+          eyeL.translate(0.15, 1.0, 0.4);
+          eyeL.scale(0.07, 0.07, 0.05);
+          renderCube(0, 0, 0, -1, eyeL, DARK);
+          
+          let eyeR = new Matrix4(base);
+          eyeR.translate(0.35, 1.0, 0.4);
+          eyeR.scale(0.07, 0.07, 0.05);
+          renderCube(0, 0, 0, -1, eyeR, DARK);
+          
+          // === NOSE (below eyes, sticks out from face) ===
+          let nose = new Matrix4(base);
+          nose.translate(0.25, 0.88, 0.42);
+          nose.scale(0.05, 0.06, 0.04);
+          drawPyramid(nose, DARK);
+          
+          // === ARMS (overlap body X range 0 to 0.5) ===
+          // Left arm center X: 0.06, extends X: 0 to 0.12
+          // Overlaps body X: 0 to 0.12 ✓
+          let armL = new Matrix4(base);
+          armL.translate(0.06, 0.5, 0.2);
+          armL.scale(0.12, 0.4, 0.12);
+          renderCube(0, 0, 0, -1, armL, GRAY);
+          
+          // Right arm center X: 0.44, extends X: 0.38 to 0.5
+          // Overlaps body X: 0.38 to 0.5 ✓
+          let armR = new Matrix4(base);
+          armR.translate(0.44, 0.5, 0.2);
+          armR.scale(0.12, 0.4, 0.12);
+          renderCube(0, 0, 0, -1, armR, GRAY);
+          
+          // === LEGS (overlap body bottom) ===
+          // Left leg center: (0.12, 0.12, 0.2)
+          let legL = new Matrix4(base);
+          legL.translate(0.12, 0.12, 0.2);
+          legL.scale(0.12, 0.35, 0.15);
+          renderCube(0, 0, 0, -1, legL, GRAY);
+          
+          // Right leg center: (0.38, 0.12, 0.2)
+          let legR = new Matrix4(base);
+          legR.translate(0.38, 0.12, 0.2);
+          legR.scale(0.12, 0.35, 0.15);
+          renderCube(0, 0, 0, -1, legR, GRAY);
+          
+          // === FEET ===
+          let footL = new Matrix4(base);
+          footL.translate(0.12, -0.03, 0.2);
+          footL.scale(0.15, 0.08, 0.2);
+          renderCube(0, 0, 0, -1, footL, DARK);
+          
+          let footR = new Matrix4(base);
+          footR.translate(0.38, -0.03, 0.2);
+          footR.scale(0.15, 0.08, 0.2);
+          renderCube(0, 0, 0, -1, footR, DARK);
+        }
+        
+        
+        // Camera Class
+        class Camera {
+          constructor() {
+            this.fov = 60;
+            this.eye = new Vector3([16, 1.6, 16]);
+            this.at = new Vector3([16, 1.6, 15]);
+            this.up = new Vector3([0, 1, 0]);
+            
+            this.viewMatrix = new Matrix4();
+            this.projectionMatrix = new Matrix4();
+            
+            this.speed = 0.5;
+            this.rotationSpeed = 5;
+            this.alpha = 0;
+            this.beta = 0;
+            
+            this.updateViewMatrix();
+            this.updateProjectionMatrix();
+          }
+          
+          updateViewMatrix() {
+            this.viewMatrix.setLookAt(
+              this.eye.elements[0], this.eye.elements[1], this.eye.elements[2],
+              this.at.elements[0], this.at.elements[1], this.at.elements[2],
+              this.up.elements[0], this.up.elements[1], this.up.elements[2]
+            );
+          }
+          
+          updateProjectionMatrix() {
+            this.projectionMatrix.setPerspective(this.fov, canvas.width / canvas.height, 0.1, 1000);
+          }
+          
+          getForwardDirection() {
+            let dx = this.at.elements[0] - this.eye.elements[0];
+            let dy = this.at.elements[1] - this.eye.elements[1];
+            let dz = this.at.elements[2] - this.eye.elements[2];
+            let len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            return { x: dx/len, y: dy/len, z: dz/len };
+          }
+          
+          moveForward() {
+            let dx = this.at.elements[0] - this.eye.elements[0];
+            let dy = this.at.elements[1] - this.eye.elements[1];
+            let dz = this.at.elements[2] - this.eye.elements[2];
+            let len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            dx /= len; dy /= len; dz /= len;
+            
+            this.eye.elements[0] += dx * this.speed;
+            this.eye.elements[1] += dy * this.speed;
+            this.eye.elements[2] += dz * this.speed;
+            this.at.elements[0] += dx * this.speed;
+            this.at.elements[1] += dy * this.speed;
+            this.at.elements[2] += dz * this.speed;
+            
+            this.updateViewMatrix();
+          }
+          
+          moveBackward() {
+            let dx = this.eye.elements[0] - this.at.elements[0];
+            let dy = this.eye.elements[1] - this.at.elements[1];
+            let dz = this.eye.elements[2] - this.at.elements[2];
+            let len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            dx /= len; dy /= len; dz /= len;
+            
+            this.eye.elements[0] += dx * this.speed;
+            this.eye.elements[1] += dy * this.speed;
+            this.eye.elements[2] += dz * this.speed;
+            this.at.elements[0] += dx * this.speed;
+            this.at.elements[1] += dy * this.speed;
+            this.at.elements[2] += dz * this.speed;
+            
+            this.updateViewMatrix();
+          }
+          
+          moveLeft() {
+            let fx = this.at.elements[0] - this.eye.elements[0];
+            let fy = this.at.elements[1] - this.eye.elements[1];
+            let fz = this.at.elements[2] - this.eye.elements[2];
+            
+            let sx = this.up.elements[1] * fz - this.up.elements[2] * fy;
+            let sy = this.up.elements[2] * fx - this.up.elements[0] * fz;
+            let sz = this.up.elements[0] * fy - this.up.elements[1] * fx;
+            let len = Math.sqrt(sx*sx + sy*sy + sz*sz);
+            sx /= len; sy /= len; sz /= len;
+            
+            this.eye.elements[0] += sx * this.speed;
+            this.eye.elements[1] += sy * this.speed;
+            this.eye.elements[2] += sz * this.speed;
+            this.at.elements[0] += sx * this.speed;
+            this.at.elements[1] += sy * this.speed;
+            this.at.elements[2] += sz * this.speed;
+            
+            this.updateViewMatrix();
+          }
+          
+          moveRight() {
+            let fx = this.at.elements[0] - this.eye.elements[0];
+            let fy = this.at.elements[1] - this.eye.elements[1];
+            let fz = this.at.elements[2] - this.eye.elements[2];
+            
+            let sx = fy * this.up.elements[2] - fz * this.up.elements[1];
+            let sy = fz * this.up.elements[0] - fx * this.up.elements[2];
+            let sz = fx * this.up.elements[1] - fy * this.up.elements[0];
+            let len = Math.sqrt(sx*sx + sy*sy + sz*sz);
+            sx /= len; sy /= len; sz /= len;
+            
+            this.eye.elements[0] += sx * this.speed;
+            this.eye.elements[1] += sy * this.speed;
+            this.eye.elements[2] += sz * this.speed;
+            this.at.elements[0] += sx * this.speed;
+            this.at.elements[1] += sy * this.speed;
+            this.at.elements[2] += sz * this.speed;
+            
+            this.updateViewMatrix();
+          }
+          
+          panLeft() {
+            let fx = this.at.elements[0] - this.eye.elements[0];
+            let fy = this.at.elements[1] - this.eye.elements[1];
+            let fz = this.at.elements[2] - this.eye.elements[2];
+            
+            let angle = this.rotationSpeed * Math.PI / 180;
+            let cos = Math.cos(angle);
+            let sin = Math.sin(angle);
+            
+            let newX = fx * cos - fz * sin;
+            let newZ = fx * sin + fz * cos;
+            
+            this.at.elements[0] = this.eye.elements[0] + newX;
+            this.at.elements[2] = this.eye.elements[2] + newZ;
+            
+            this.updateViewMatrix();
+          }
+          
+          panRight() {
+            let fx = this.at.elements[0] - this.eye.elements[0];
+            let fy = this.at.elements[1] - this.eye.elements[1];
+            let fz = this.at.elements[2] - this.eye.elements[2];
+            
+            let angle = -this.rotationSpeed * Math.PI / 180;
+            let cos = Math.cos(angle);
+            let sin = Math.sin(angle);
+            
+            let newX = fx * cos - fz * sin;
+            let newZ = fx * sin + fz * cos;
+            
+            this.at.elements[0] = this.eye.elements[0] + newX;
+            this.at.elements[2] = this.eye.elements[2] + newZ;
+            
+            this.updateViewMatrix();
+          }
+          
+          rotate(deltaX, deltaY) {
+            this.alpha -= deltaX * 0.3;
+            this.beta += deltaY * 0.2;
+            this.beta = Math.max(-89, Math.min(89, this.beta));
+            
+            let alphaRad = this.alpha * Math.PI / 180;
+            let betaRad = this.beta * Math.PI / 180;
+            
+            let fx = Math.cos(betaRad) * Math.sin(alphaRad);
+            let fy = Math.sin(betaRad);
+            let fz = Math.cos(betaRad) * Math.cos(alphaRad);
+            
+            this.at.elements[0] = this.eye.elements[0] + fx;
+            this.at.elements[1] = this.eye.elements[1] + fy;
+            this.at.elements[2] = this.eye.elements[2] + fz;
+            
+            this.updateViewMatrix();
+          }
+        }
+    </script>
+    
+    <script>
+        const VSHADER_SOURCE = `
+            attribute vec4 a_Position;
+            attribute vec2 a_UV;
+            uniform mat4 u_ModelMatrix;
+            uniform mat4 u_ViewMatrix;
+            uniform mat4 u_ProjectionMatrix;
+            varying vec2 v_UV;
+            void main() {
+              gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * a_Position;
+              v_UV = a_UV;
+            }
+        `;
+        
+        const FSHADER_SOURCE = `
+            precision mediump float;
+            uniform sampler2D u_Sampler0;
+            uniform sampler2D u_Sampler1;
+            uniform sampler2D u_Sampler2;
+            uniform int u_WhichTexture;
+            uniform vec4 u_Color;
+            varying vec2 v_UV;
+            void main() {
+              if (u_WhichTexture == -1) {
+                gl_FragColor = u_Color;
+              } else if (u_WhichTexture == 0) {
+                gl_FragColor = texture2D(u_Sampler0, v_UV);
+              } else if (u_WhichTexture == 1) {
+                gl_FragColor = texture2D(u_Sampler1, v_UV);
+              } else if (u_WhichTexture == 2) {
+                gl_FragColor = texture2D(u_Sampler2, v_UV);
+              } else {
+                gl_FragColor = u_Color;
+              }
+            }
+        `;
+        
+        let gl, canvas, camera;
+        let a_Position, a_UV;
+        let u_ModelMatrix, u_ViewMatrix, u_ProjectionMatrix;
+        let u_Sampler0, u_Sampler1, u_Sampler2;
+        let u_WhichTexture, u_Color;
+        let cubeBuffer, cubeVertexCount;
+        let worldMap = [];
+        let walls = [];
+        
+        // Stats
+        let blocksPlaced = 0;
+        let blocksDeleted = 0;
+        
+        // GAME VARIABLES
+        let mob = { x: 5, y: 1, z: 5 };
+        let mobSpeed = 0.02;
+        let gameOver = false;
+        let survivedTime = 0;
+        let collectibles = [];  // Koalas to rescue!
+        let score = 0;
+        
+        function main() {
+          canvas = document.getElementById('webgl');
+          gl = getWebGLContext(canvas);
+          if (!gl) { alert('Failed to get WebGL context!'); return; }
+          if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) { alert('Shader compilation failed!'); return; }
+          
+          a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+          a_UV = gl.getAttribLocation(gl.program, 'a_UV');
+          u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
+          u_ViewMatrix = gl.getUniformLocation(gl.program, 'u_ViewMatrix');
+          u_ProjectionMatrix = gl.getUniformLocation(gl.program, 'u_ProjectionMatrix');
+          u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+          u_Sampler1 = gl.getUniformLocation(gl.program, 'u_Sampler1');
+          u_Sampler2 = gl.getUniformLocation(gl.program, 'u_Sampler2');
+          u_WhichTexture = gl.getUniformLocation(gl.program, 'u_WhichTexture');
+          u_Color = gl.getUniformLocation(gl.program, 'u_Color');
+          
+          initCubeBuffer();
+          initSphereBuffer();
+          initPyramidBuffer();
+          initTextures();
+          camera = new Camera();
+          buildWorld();
+          setupEventListeners();
+          
+          gl.clearColor(0.53, 0.81, 0.92, 1.0);
+          gl.enable(gl.DEPTH_TEST);
+          tick();
+        }
+        
+        function initCubeBuffer() {
+          let vertices = new Float32Array([
+            -0.5,-0.5, 0.5, 0,0,  0.5,-0.5, 0.5, 1,0,  0.5, 0.5, 0.5, 1,1,
+            -0.5,-0.5, 0.5, 0,0,  0.5, 0.5, 0.5, 1,1, -0.5, 0.5, 0.5, 0,1,
+            -0.5,-0.5,-0.5, 0,0, -0.5, 0.5,-0.5, 0,1,  0.5, 0.5,-0.5, 1,1,
+            -0.5,-0.5,-0.5, 0,0,  0.5, 0.5,-0.5, 1,1,  0.5,-0.5,-0.5, 1,0,
+            -0.5, 0.5,-0.5, 0,1, -0.5, 0.5, 0.5, 0,0,  0.5, 0.5, 0.5, 1,0,
+            -0.5, 0.5,-0.5, 0,1,  0.5, 0.5, 0.5, 1,0,  0.5, 0.5,-0.5, 1,1,
+            -0.5,-0.5,-0.5, 0,1,  0.5,-0.5,-0.5, 1,1,  0.5,-0.5, 0.5, 1,0,
+            -0.5,-0.5,-0.5, 0,1,  0.5,-0.5, 0.5, 1,0, -0.5,-0.5, 0.5, 0,0,
+             0.5,-0.5,-0.5, 0,0,  0.5, 0.5,-0.5, 0,1,  0.5, 0.5, 0.5, 1,1,
+             0.5,-0.5,-0.5, 0,0,  0.5, 0.5, 0.5, 1,1,  0.5,-0.5, 0.5, 1,0,
+            -0.5,-0.5,-0.5, 0,0, -0.5,-0.5, 0.5, 1,0, -0.5, 0.5, 0.5, 1,1,
+            -0.5,-0.5,-0.5, 0,0, -0.5, 0.5, 0.5, 1,1, -0.5, 0.5,-0.5, 0,1
+          ]);
+          cubeVertexCount = 36;
+          cubeBuffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        }
+        
+        function initTextures() {
+          let image0 = new Image();
+          image0.onload = () => sendTextureToGLSL(image0, 0);
+          image0.src = 'resources/dirt.png';
+          
+          let image1 = new Image();
+          image1.onload = () => sendTextureToGLSL(image1, 1);
+          image1.src = 'resources/grass.png';
+          
+          let image2 = new Image();
+          image2.onload = () => sendTextureToGLSL(image2, 2);
+          image2.src = 'resources/stone.jpg';
+        }
+        
+        function sendTextureToGLSL(image, unit) {
+          let texture = gl.createTexture();
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+          gl.activeTexture(gl.TEXTURE0 + unit);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+          if (unit === 0) gl.uniform1i(u_Sampler0, 0);
+          else if (unit === 1) gl.uniform1i(u_Sampler1, 1);
+          else if (unit === 2) gl.uniform1i(u_Sampler2, 2);
+        }
+        
+        function buildWorld() {
+          worldMap = [];
+          for (let x = 0; x < 32; x++) {
+            worldMap[x] = [];
+            for (let z = 0; z < 32; z++) {
+              worldMap[x][z] = [];
+            }
+          }
+          
+          for (let x = 0; x < 32; x++) {
+            for (let z = 0; z < 32; z++) {
+              let height;
+              if (x === 0 || x === 31 || z === 0 || z === 31) {
+                height = 2;
+              } else if ((x % 4 === 0 && z % 2 === 0) || (z % 4 === 0 && x % 2 === 0)) {
+                height = Math.floor(Math.random() * 4) + 2;
+              } else {
+                height = 0;
+              }
+              
+              for (let y = 0; y < height; y++) {
+                worldMap[x][z][y] = true;
+              }
+            }
+          }
+          
+          rebuildWalls();
+          initGame();
+        }
+        
+        function initGame() {
+          mob = { x: 5, y: 1, z: 5 };
+          
+          // Spawn 5 cute koalas!
+          collectibles = [];
+          for (let i = 0; i < 5; i++) {
+            let x = Math.floor(Math.random() * 28) + 2;
+            let z = Math.floor(Math.random() * 28) + 2;
+            collectibles.push({ 
+              x: x, 
+              y: 1, 
+              z: z, 
+              collected: false,
+              rotation: 0,
+              bob: 0
+            });
+          }
+          
+          gameOver = false;
+          survivedTime = 0;
+          score = 0;
+          
+          console.log("Game started! Rescue the koalas!");
+        }
+        
+        function rebuildWalls() {
+          walls = [];
+          for (let x = 0; x < 32; x++) {
+            for (let z = 0; z < 32; z++) {
+              for (let y = 0; y < worldMap[x][z].length; y++) {
+                if (worldMap[x][z][y]) {
+                  walls.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    textureNum: (y === 0) ? 0 : 2
+                  });
+                }
+              }
+            }
+          }
+        }
+        
+        function getGridSquareInFront() {
+          let dir = camera.getForwardDirection();
+          let distance = 2;
+          
+          let targetX = camera.eye.elements[0] + dir.x * distance;
+          let targetZ = camera.eye.elements[2] + dir.z * distance;
+          
+          let x = Math.floor(targetX);
+          let z = Math.floor(targetZ);
+          
+          x = Math.max(0, Math.min(31, x));
+          z = Math.max(0, Math.min(31, z));
+          
+          return { x, z };
+        }
+        
+        function getStackHeight(x, z) {
+          let height = 0;
+          for (let y = 0; y < worldMap[x][z].length; y++) {
+            if (worldMap[x][z][y]) {
+              height = y + 1;
+            }
+          }
+          return height;
+        }
+        
+        function placeBlock() {
+          let grid = getGridSquareInFront();
+          let height = getStackHeight(grid.x, grid.z);
+          let y = height;
+          
+          if (!worldMap[grid.x][grid.z][y]) {
+            worldMap[grid.x][grid.z][y] = false;
+          }
+          
+          worldMap[grid.x][grid.z][y] = true;
+          
+          walls.push({
+            x: grid.x,
+            y: y,
+            z: grid.z,
+            textureNum: 2
+          });
+          
+          blocksPlaced++;
+          console.log(`Placed block at (${grid.x}, ${y}, ${grid.z})`);
+        }
+        
+        function deleteBlock() {
+          let grid = getGridSquareInFront();
+          let height = getStackHeight(grid.x, grid.z);
+          
+          if (height === 0) {
+            return;
+          }
+          
+          let y = height - 1;
+          worldMap[grid.x][grid.z][y] = false;
+          
+          walls = walls.filter(w => 
+            !(w.x === grid.x && w.y === y && w.z === grid.z)
+          );
+          
+          blocksDeleted++;
+          console.log(`Deleted block at (${grid.x}, ${y}, ${grid.z})`);
+        }
+        
+        function updateGame() {
+          if (gameOver) return;
+          
+          survivedTime += 0.016;
+          
+          let playerX = camera.eye.elements[0];
+          let playerZ = camera.eye.elements[2];
+          
+          let dx = playerX - mob.x;
+          let dz = playerZ - mob.z;
+          let dist = Math.sqrt(dx*dx + dz*dz);
+          
+          if (dist > 0.1) {
+            mob.x += (dx / dist) * mobSpeed;
+            mob.z += (dz / dist) * mobSpeed;
+            
+            let mobGridX = Math.floor(mob.x);
+            let mobGridZ = Math.floor(mob.z);
+            
+            if (mobGridX >= 0 && mobGridX < 32 && mobGridZ >= 0 && mobGridZ < 32) {
+              if (worldMap[mobGridX][mobGridZ][0]) {
+                mob.x -= (dx / dist) * mobSpeed * 2;
+                mob.z -= (dz / dist) * mobSpeed * 2;
+              }
+            }
+          }
+          
+          let playerDist = Math.sqrt(dx*dx + dz*dz);
+          if (playerDist < 1.5) {
+            gameOver = true;
+            console.log("GAME OVER! The mob caught you!");
+            alert(`GAME OVER! You survived ${survivedTime.toFixed(1)} seconds and rescued ${score} koalas!`);
+          }
+          
+          // Update koalas
+          for (let i = 0; i < collectibles.length; i++) {
+            if (!collectibles[i].collected) {
+              collectibles[i].rotation += 2;
+              collectibles[i].bob = Math.sin(survivedTime * 3 + i) * 0.1;
+              
+              let cdx = playerX - collectibles[i].x;
+              let cdz = playerZ - collectibles[i].z;
+              let cDist = Math.sqrt(cdx*cdx + cdz*cdz);
+              
+              if (cDist < 1.2) {
+                collectibles[i].collected = true;
+                score += 1;
+                console.log("Rescued a koala! Total: " + score);
+                
+                if (score === 5) {
+                  gameOver = true;
+                  alert(`YOU WIN! You rescued all 5 koalas in ${survivedTime.toFixed(1)} seconds!`);
+                }
+              }
+            }
+          }
+        }
+        
+        function updateHUD() {
+          let hud = document.getElementById('hud');
+          
+          if (gameOver) {
+            hud.innerHTML = `
+              <span style="color: ${score === 5 ? 'lime' : 'red'}; font-weight: bold;">
+                ${score === 5 ? 'YOU WIN!' : 'GAME OVER!'}
+              </span><br>
+              Survived: ${survivedTime.toFixed(1)}s<br>
+              Koalas saved: ${score} / 5<br>
+              <span style="font-size: 12px;">Refresh to restart</span>
+            `;
+          } else {
+            hud.innerHTML = `
+              Time: ${survivedTime.toFixed(1)}s<br>
+              Koalas rescued: ${score} / 5<br>
+              Mob distance: ${Math.sqrt(
+                Math.pow(camera.eye.elements[0] - mob.x, 2) + 
+                Math.pow(camera.eye.elements[2] - mob.z, 2)
+              ).toFixed(1)}<br>
+              <strong>FPS: ${fps}</strong><br>
+              <hr style="border-color: #0f0;">
+              Walls placed: ${blocksPlaced}<br>
+              Walls deleted: ${blocksDeleted}
+            `;
+          }
+        }
+        
+        function renderCube(x, y, z, textureNum, matrix, color) {
+          let modelMatrix = matrix || new Matrix4();
+          if (!matrix) {
+            modelMatrix.setTranslate(x, y, z);
+          }
+          
+          gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+          gl.uniform1i(u_WhichTexture, textureNum);
+          
+          if (textureNum === -1 && color) {
+            gl.uniform4f(u_Color, color[0], color[1], color[2], color[3]);
+          }
+          
+          gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffer);
+          let FSIZE = Float32Array.BYTES_PER_ELEMENT;
+          gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, FSIZE * 5, 0);
+          gl.enableVertexAttribArray(a_Position);
+          gl.vertexAttribPointer(a_UV, 2, gl.FLOAT, false, FSIZE * 5, FSIZE * 3);
+          gl.enableVertexAttribArray(a_UV);
+          gl.drawArrays(gl.TRIANGLES, 0, cubeVertexCount);
+        }
+        
+        function renderScene() {
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          
+          gl.uniformMatrix4fv(u_ViewMatrix, false, camera.viewMatrix.elements);
+          gl.uniformMatrix4fv(u_ProjectionMatrix, false, camera.projectionMatrix.elements);
+          
+          // Ground
+          let groundMatrix = new Matrix4();
+          groundMatrix.setTranslate(16, -0.5, 16);
+          groundMatrix.scale(32, 0.1, 32);
+          renderCube(0, 0, 0, 1, groundMatrix);
+          
+          // Sky
+          let skyMatrix = new Matrix4();
+          skyMatrix.setTranslate(16, 16, 16);
+          skyMatrix.scale(300, 300, 300);
+          renderCube(0, 0, 0, -1, skyMatrix, [0.53, 0.81, 0.92, 1.0]);
+          
+          // Walls
+          for (let i = 0; i < walls.length; i++) {
+            renderCube(walls[i].x, walls[i].y, walls[i].z, walls[i].textureNum);
+          }
+          
+          // Mob
+          let mobMatrix = new Matrix4();
+          mobMatrix.setTranslate(mob.x, mob.y, mob.z);
+          renderCube(0, 0, 0, -1, mobMatrix, [1.0, 0.0, 0.0, 1.0]);
+          
+          // Koalas!
+          for (let i = 0; i < collectibles.length; i++) {
+            if (!collectibles[i].collected) {
+              renderKoala(
+                collectibles[i].x, 
+                collectibles[i].y + collectibles[i].bob, 
+                collectibles[i].z, 
+                collectibles[i].rotation
+              );
+            }
+          }
+        }
+        
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+        
+        function tick() {
+          updateGame();
+          renderScene();
+          updateHUD();
+          
+          // FPS counter
+          frameCount++;
+          let currentTime = performance.now();
+          if (currentTime - lastFrameTime >= 1000) {
+            fps = frameCount;
+            frameCount = 0;
+            lastFrameTime = currentTime;
+            console.log("FPS: " + fps);
+          }
+          
+          requestAnimationFrame(tick);
+        }
+        
+        function setupEventListeners() {
+          document.addEventListener('keydown', (ev) => {
+            switch(ev.key.toLowerCase()) {
+              case 'w': camera.moveForward(); break;
+              case 's': camera.moveBackward(); break;
+              case 'a': camera.moveLeft(); break;
+              case 'd': camera.moveRight(); break;
+              case 'q': camera.panLeft(); break;
+              case 'e': camera.panRight(); break;
+              case 'x': placeBlock(); break;
+              case 'z': deleteBlock(); break;
+            }
+          });
+          
+          canvas.addEventListener('click', () => {
+            canvas.requestPointerLock();
+          });
+          
+          document.addEventListener('mousemove', (ev) => {
+            if (document.pointerLockElement === canvas) {
+              camera.rotate(ev.movementX, ev.movementY);
+            }
+          });
+        }
+        
+        window.onload = main;
+    </script>
+</body>
+</html>

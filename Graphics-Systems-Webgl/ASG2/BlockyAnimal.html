@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<div style="position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: #666;">
+  Name: Asaveri Rao<br>
+  Email: arao23@ucsc.edu
+</div>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Blocky Koala</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .slider { width: 300px; }
+  </style>
+</head>
+
+<body onload="main()">
+
+  <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+  </canvas>
+
+  <p id="numdot">ms: -- fps: --</p>
+
+  <p><b>Global Rotation</b></p>
+  <input type="range" min="-180" max="180" value="0" class="slider" id="angleSlide">
+
+  <p><b>Left Leg Joints (3-level limb)</b></p>
+
+  <div>
+    Left Hip
+    <input type="range" min="-90" max="90" value="0" class="slider" id="leftHipSlide">
+  </div>
+  <div>
+    Left Knee
+    <input type="range" min="-90" max="90" value="0" class="slider" id="leftKneeSlide">
+  </div>
+  <div>
+    Left Ankle
+    <input type="range" min="-45" max="45" value="0" class="slider" id="leftAnkleSlide">
+  </div>
+
+  <p><b>Animation</b></p>
+  <button type="button" id="animOn">Animation ON</button>
+  <button type="button" id="animOff">Animation OFF</button>
+
+  <p></p>
+
+  <!-- Libraries -->
+  <script src="lib/webgl-utils.js"></script>
+  <script src="lib/webgl-debug.js"></script>
+  <script src="lib/cuon-utils.js"></script>
+  <script src="lib/cuon-matrix-cse160.js"></script>
+
+  <!-- Shapes -->
+  <script src="Triangle.js"></script>
+  <script src="Circle.js"></script>
+  <script src="Point.js"></script>
+  <script src="Cube.js"></script>
+
+  <!-- Main -->
+  <script src="BlockyAnimal.js"></script>
+
+</body>
+</html>
