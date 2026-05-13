@@ -52,6 +52,21 @@ Practical scripting, data pipelines, and applied machine learning.
 
 ---
 
+
+## WebGL & Computer Graphics Projects
+Focus on real-time rendering systems, 3D graphics pipelines, and interactive visual applications.
+
+- Built a progression of graphics systems using **WebGL and Three.js**, starting from vector math and 2D rendering to full 3D environments with lighting and shaders  
+- Implemented **custom rendering pipelines** including model-view-projection transformations, hierarchical modeling, and real-time animation systems  
+- Developed a **voxel-based 3D world engine** with first-person camera controls, procedural map generation, and interactive navigation  
+- Designed and implemented **GLSL shaders** for lighting, including Phong shading with ambient, diffuse, and specular components  
+- Worked with **texture mapping, normal vectors, and lighting systems** to create visually accurate 3D scenes  
+- Built interactive applications with **event-driven input handling** (keyboard + mouse) and real-time updates  
+- Recreated a full 3D environment using **Three.js**, leveraging high-level abstractions for scene management, lighting, and model loading  
+
+**Technologies & Concepts:**
+WebGL, Three.js, GLSL, JavaScript, 3D transformations, linear algebra (vectors/matrices), rendering pipelines, shading & lighting models, real-time graphics, camera systems, scene graphs
+
 ## Repository Structure
 
 Each project directory typically contains:
