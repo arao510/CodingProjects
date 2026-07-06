@@ -1,0 +1,149 @@
+# ============================================================
+# RAG Application - Versioned Prompt Configuration
+# All prompts live here. Never hardcode prompts in source.
+# ============================================================
+
+version: "2.0.0"
+updated: "2025-07-03"
+description: "Production RAG prompts — Phase 4: Corrective RAG added"
+
+prompts:
+  # ── ANSWER GENERATION ────────────────────────────────────────
+  answer_with_citations:
+    version: "1.0.0"
+    description: "Main answer prompt. Enforces citation grounding."
+    template: |
+      You are a precise technical assistant. Answer the user's question using ONLY
+      the provided context chunks. Every factual claim you make MUST cite its source
+      using the format [Source N] where N matches the chunk number below.
+
+      STRICT RULES:
+      1. Only use information present in the provided chunks.
+      2. Every sentence with a factual claim must have at least one [Source N] citation.
+      3. If the chunks do not contain enough information to answer, say so explicitly.
+      4. Do not speculate or add information from your training data.
+      5. If you cannot cite a claim, do not make the claim.
+
+      CONTEXT CHUNKS:
+      {context}
+
+      QUESTION: {question}
+
+      Answer (with citations):
+
+  # ── CITATION ENFORCEMENT ─────────────────────────────────────
+  insufficient_context:
+    version: "1.0.0"
+    description: "Decline response when retrieved chunks don't support answering."
+    template: |
+      I cannot reliably answer this question based on the available documentation.
+
+      The retrieved documents do not contain sufficient information to answer:
+      "{question}"
+
+      Specifically: {reason}
+
+      To get a better answer, you might:
+      - Rephrase your question with different terminology
+      - Ask about a more specific aspect of the topic
+      - Check if the relevant documents have been indexed
+
+  relevance_check:
+    version: "1.0.0"
+    description: "Determines if retrieved chunks actually support answering the question."
+    template: |
+      Evaluate whether the following context chunks contain sufficient information
+      to answer the given question. Be strict — partial information is not enough.
+
+      QUESTION: {question}
+
+      CONTEXT CHUNKS:
+      {context}
+
+      Respond with ONLY a JSON object:
+      {{
+        "supported": true/false,
+        "confidence": 0.0-1.0,
+        "reason": "brief explanation of what is or isn't present"
+      }}
+
+  # ── QUERY PROCESSING ─────────────────────────────────────────
+  query_expansion:
+    version: "1.0.0"
+    description: "Expands query with synonyms for better BM25 recall."
+    template: |
+      Given this search query, produce 2-3 alternative phrasings that capture
+      the same intent but use different terminology. Return as JSON list only.
+
+      Query: {query}
+
+      Alternative phrasings (JSON list):
+
+  # ── PHASE 4: CORRECTIVE RAG PROMPTS ──────────────────────────
+  chunk_relevance_grader:
+    version: "1.0.0"
+    description: |
+      Grades each individual retrieved chunk for relevance to the query.
+      Returns a score and binary relevant/irrelevant label per chunk.
+      This is the core of Corrective RAG — chunk-level rather than batch-level judgment.
+    template: |
+      You are grading whether a retrieved document chunk is relevant to a question.
+      Be strict — only mark as relevant if the chunk directly helps answer the question.
+
+      QUESTION: {question}
+
+      CHUNK:
+      {chunk}
+
+      Respond with ONLY a JSON object:
+      {{
+        "relevant": true/false,
+        "score": 0.0-1.0,
+        "reason": "one sentence explaining your judgment"
+      }}
+
+  query_rewriter:
+    version: "1.0.0"
+    description: |
+      Rewrites a failed query when retrieved chunks score poorly.
+      Produces a better query by decomposing intent and using alternative terminology.
+      This is what allows Corrective RAG to recover rather than just decline.
+    template: |
+      A search query failed to retrieve relevant documents. Your job is to rewrite
+      it to improve retrieval. Use different terminology, be more specific, or
+      decompose into the core concept being asked about.
+
+      ORIGINAL QUERY: {query}
+
+      REASON RETRIEVAL FAILED: {reason}
+
+      Write ONE improved search query. Return ONLY the rewritten query, nothing else:
+
+# ── RETRIEVAL SETTINGS ────────────────────────────────────────
+retrieval:
+  top_k_initial: 20
+  top_k_final: 5
+  bm25_weight: 0.3
+  vector_weight: 0.7
+  min_relevance_score: 0.35
+  citation_confidence_threshold: 0.50
+
+  # Phase 4: Corrective RAG settings
+  corrective_rag:
+    enabled: true
+    chunk_relevance_threshold: 0.5   # below this score a chunk is "irrelevant"
+    min_good_chunks: 2               # need at least this many good chunks to answer
+    max_retries: 1                   # how many query rewrites to attempt before declining
+
+# ── CHUNKING SETTINGS ────────────────────────────────────────
+chunking:
+  target_tokens: 650
+  overlap_tokens: 100
+  min_chunk_tokens: 100
+
+# ── MODELS ───────────────────────────────────────────────────
+models:
+  embedding: "all-MiniLM-L6-v2"
+  reranker: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  llm_provider: "openai"
+  llm_model: "gpt-4o-mini"

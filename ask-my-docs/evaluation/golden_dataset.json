@@ -1,0 +1,359 @@
+[
+  {
+    "id": "aws_srm_001",
+    "question": "What is the AWS shared responsibility model?",
+    "ground_truth": "The AWS shared responsibility model divides security responsibilities between AWS and customers. AWS is responsible for security 'of' the cloud — the infrastructure including hardware, software, networking, and physical facilities. Customers are responsible for security 'in' the cloud — including guest OS management, application security, and data protection.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_srm_002",
+    "question": "What is AWS responsible for under the shared responsibility model?",
+    "ground_truth": "AWS is responsible for protecting the infrastructure that runs all AWS services, including the hardware, software, networking, and physical facilities that run AWS Cloud services. This is referred to as security 'of' the cloud.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_srm_003",
+    "question": "What are customers responsible for under the AWS shared responsibility model?",
+    "ground_truth": "Customers are responsible for security 'in' the cloud, which varies by service used. For IaaS like EC2, customers manage the guest OS, patches, firewall configuration, and application software. For managed services, AWS handles more of the security tasks but customers still manage data, IAM, and network traffic.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_iam_001",
+    "question": "What is AWS IAM?",
+    "ground_truth": "AWS Identity and Access Management (IAM) is a service that helps securely control access to AWS resources. It allows you to manage who is authenticated (signed in) and authorized (has permissions) to use AWS resources.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_iam_002",
+    "question": "What are IAM best practices for securing AWS accounts?",
+    "ground_truth": "IAM best practices include: locking away root account access keys, creating individual IAM users, using groups to assign permissions, granting least privilege, enabling MFA, using IAM roles for applications, rotating credentials regularly, and monitoring account activity with AWS CloudTrail.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_iam_003",
+    "question": "What is the principle of least privilege in IAM?",
+    "ground_truth": "The principle of least privilege means granting only the permissions required to perform a task — no more. In IAM, this means starting with minimum permissions and granting additional permissions as needed rather than starting with broad permissions.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_s3_001",
+    "question": "What is Amazon S3?",
+    "ground_truth": "Amazon Simple Storage Service (S3) is an object storage service offering industry-leading scalability, data availability, security, and performance. It can be used to store and protect any amount of data for a range of use cases including data lakes, websites, backups, and big data analytics.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_s3_002",
+    "question": "What are S3 security best practices?",
+    "ground_truth": "S3 security best practices include: disabling public access by default, using bucket policies and ACLs to control access, enabling S3 server-side encryption, using VPC endpoints, enabling versioning, enabling S3 access logging, and using AWS CloudTrail to track S3 API calls.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_s3_003",
+    "question": "What storage classes does Amazon S3 offer?",
+    "ground_truth": "Amazon S3 offers multiple storage classes including S3 Standard for frequently accessed data, S3 Intelligent-Tiering for data with changing access patterns, S3 Standard-IA and S3 One Zone-IA for infrequent access, S3 Glacier Instant Retrieval, S3 Glacier Flexible Retrieval, and S3 Glacier Deep Archive for long-term archiving.",
+    "domain": "aws_core",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_lambda_001",
+    "question": "What is AWS Lambda?",
+    "ground_truth": "AWS Lambda is a serverless compute service that runs code in response to events and automatically manages the underlying compute resources. You pay only for the compute time you consume — there is no charge when your code is not running.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_lambda_002",
+    "question": "What are the key features of AWS Lambda?",
+    "ground_truth": "Key Lambda features include: no server management, continuous scaling, millisecond billing, consistent performance, support for multiple programming languages, built-in fault tolerance, automatic scaling from a few requests to thousands per second, and integration with other AWS services via event triggers.",
+    "domain": "aws_core",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_cloudwatch_001",
+    "question": "What is Amazon CloudWatch?",
+    "ground_truth": "Amazon CloudWatch is a monitoring and observability service for AWS resources and applications. It collects monitoring and operational data in the form of logs, metrics, and events, and provides a unified view of operational health to detect anomalous behavior and set alarms.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_cloudwatch_002",
+    "question": "How do CloudWatch alarms work?",
+    "ground_truth": "CloudWatch alarms watch a single metric over a specified time period and perform actions based on the value of the metric relative to a threshold. Alarms can trigger actions such as sending SNS notifications, Auto Scaling actions, or EC2 actions when the metric breaches the threshold.",
+    "domain": "aws_core",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_vpc_001",
+    "question": "What is Amazon VPC?",
+    "ground_truth": "Amazon Virtual Private Cloud (VPC) is a logically isolated section of the AWS Cloud where you can launch AWS resources in a virtual network that you define. You have complete control over your virtual networking environment, including selection of IP address ranges, creation of subnets, and configuration of route tables and network gateways.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_vpc_002",
+    "question": "What are VPC security groups?",
+    "ground_truth": "Security groups act as virtual firewalls for EC2 instances to control inbound and outbound traffic. Security groups are stateful — if you send a request from your instance, the response traffic is allowed regardless of inbound rules. You can specify allow rules but not deny rules.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_guardduty_001",
+    "question": "What is Amazon GuardDuty?",
+    "ground_truth": "Amazon GuardDuty is a threat detection service that continuously monitors for malicious activity and unauthorized behavior to protect AWS accounts, workloads, and data. It uses machine learning, anomaly detection, and integrated threat intelligence to identify threats.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_guardduty_002",
+    "question": "What data sources does GuardDuty analyze?",
+    "ground_truth": "GuardDuty analyzes data sources including AWS CloudTrail event logs, VPC flow logs, and DNS logs. It uses threat intelligence feeds and machine learning to identify unexpected and potentially unauthorized activity within the AWS environment.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_cloudtrail_001",
+    "question": "What is AWS CloudTrail?",
+    "ground_truth": "AWS CloudTrail is a service that enables governance, compliance, operational auditing, and risk auditing of AWS accounts. It records AWS API calls and delivers log files containing account activity including actions taken through the AWS Management Console, SDKs, CLI, and other services.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_securityhub_001",
+    "question": "What is AWS Security Hub?",
+    "ground_truth": "AWS Security Hub provides a comprehensive view of security alerts and security posture across AWS accounts. It aggregates, organizes, and prioritizes security findings from multiple AWS services such as GuardDuty, Inspector, and Macie, as well as from AWS Partner solutions.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_config_001",
+    "question": "What is AWS Config?",
+    "ground_truth": "AWS Config is a service that enables you to assess, audit, and evaluate the configurations of your AWS resources. It continuously monitors and records AWS resource configurations and allows you to automate the evaluation of recorded configurations against desired configurations.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_waf_001",
+    "question": "What are the five pillars of the AWS Well-Architected Framework?",
+    "ground_truth": "The five pillars of the AWS Well-Architected Framework are: Operational Excellence (running and monitoring systems), Security (protecting information and systems), Reliability (ensuring workloads perform correctly), Performance Efficiency (using resources efficiently), and Cost Optimization (avoiding unnecessary costs).",
+    "domain": "aws_waf",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_waf_002",
+    "question": "What does the security pillar of the AWS Well-Architected Framework cover?",
+    "ground_truth": "The security pillar covers the ability to protect data, systems, and assets while delivering business value through risk assessments and mitigation strategies. It includes identity and access management, detection controls, infrastructure protection, data protection, and incident response.",
+    "domain": "aws_waf",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_sagemaker_001",
+    "question": "What is Amazon SageMaker?",
+    "ground_truth": "Amazon SageMaker is a fully managed machine learning service that enables developers and data scientists to quickly build, train, and deploy machine learning models. It provides integrated Jupyter notebooks to access data sources and removes the heavy lifting from each step of the ML process.",
+    "domain": "aws_ml",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_sagemaker_002",
+    "question": "How does SageMaker handle model training?",
+    "ground_truth": "SageMaker training jobs provision compute resources, load training data from S3, run the training code in a Docker container, and save the resulting model artifacts back to S3. You specify the training algorithm, compute resources, hyperparameters, and input/output data locations.",
+    "domain": "aws_ml",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_sagemaker_003",
+    "question": "How does SageMaker handle model deployment?",
+    "ground_truth": "SageMaker deploys models as HTTPS endpoints that applications can call to get inferences. You can deploy to real-time inference endpoints for low-latency predictions, batch transform for large datasets, or serverless inference for intermittent traffic patterns.",
+    "domain": "aws_ml",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_sagemaker_004",
+    "question": "What are SageMaker Pipelines?",
+    "ground_truth": "SageMaker Pipelines is a purpose-built CI/CD service for machine learning that allows you to create, automate, and manage end-to-end ML workflows. Pipelines can automate the steps of data preparation, model training, evaluation, and deployment as a repeatable workflow.",
+    "domain": "aws_ml",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_gdpr_001",
+    "question": "How does AWS help customers comply with GDPR?",
+    "ground_truth": "AWS helps customers comply with GDPR by acting as a data processor and offering a Data Processing Addendum. AWS provides services for data encryption, access control, logging, and data residency controls. Customers remain data controllers and are responsible for how they collect and process personal data.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_gdpr_002",
+    "question": "What is the difference between a data controller and data processor under GDPR?",
+    "ground_truth": "Under GDPR, a data controller determines the purposes and means of processing personal data, while a data processor processes personal data on behalf of the controller. When using AWS, customers are typically the data controller and AWS acts as the data processor.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_hipaa_001",
+    "question": "Is AWS HIPAA compliant?",
+    "ground_truth": "AWS enables covered entities and their business associates subject to HIPAA to use the secure AWS environment to process, maintain, and store protected health information. AWS signs Business Associate Agreements (BAAs) and offers HIPAA-eligible services that meet the required security standards.",
+    "domain": "grc",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_hipaa_002",
+    "question": "What is a Business Associate Agreement in the context of AWS and HIPAA?",
+    "ground_truth": "A Business Associate Agreement (BAA) is a contract between a HIPAA covered entity and AWS as a business associate. The BAA establishes the permitted and required uses and disclosures of protected health information and is required before using AWS to store or process PHI.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_pci_001",
+    "question": "What is PCI DSS compliance in the context of AWS?",
+    "ground_truth": "PCI DSS (Payment Card Industry Data Security Standard) is a security standard for organizations handling credit card data. AWS is certified as PCI DSS Level 1 compliant, which is the highest level of compliance. Customers building payment applications on AWS inherit some AWS controls but must still validate their own compliance.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_soc_001",
+    "question": "What are AWS SOC reports?",
+    "ground_truth": "AWS SOC (System and Organization Controls) reports are independent third-party examination reports that demonstrate how AWS achieves key compliance controls and objectives. SOC 1 covers financial reporting controls, SOC 2 covers security, availability, and confidentiality, and SOC 3 is a public summary report.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "owasp_001",
+    "question": "What are the OWASP Top 10?",
+    "ground_truth": "The OWASP Top 10 is a standard awareness document representing the most critical security risks to web applications. The list includes injection, broken authentication, sensitive data exposure, XML external entities, broken access control, security misconfiguration, cross-site scripting, insecure deserialization, using components with known vulnerabilities, and insufficient logging and monitoring.",
+    "domain": "grc",
+    "difficulty": "easy"
+  },
+  {
+    "id": "owasp_002",
+    "question": "What is an injection attack?",
+    "ground_truth": "Injection attacks occur when untrusted data is sent to an interpreter as part of a command or query. SQL injection is the most common type, where an attacker inserts malicious SQL code into a query. Prevention includes using parameterized queries, stored procedures, and input validation.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "owasp_003",
+    "question": "What is sensitive data exposure in web application security?",
+    "ground_truth": "Sensitive data exposure occurs when applications do not adequately protect sensitive information such as financial data, healthcare data, or personally identifiable information. Prevention includes encrypting data at rest and in transit, using strong encryption algorithms, disabling caching of sensitive data, and not storing sensitive data unnecessarily.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "owasp_004",
+    "question": "How can SQL injection attacks be prevented?",
+    "ground_truth": "SQL injection can be prevented by using parameterized queries or prepared statements, using stored procedures, implementing input validation and allowlist validation, escaping all user-supplied input, and applying least privilege database accounts that limit the damage from successful attacks.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_iso_001",
+    "question": "What is ISO 27001 and how does AWS relate to it?",
+    "ground_truth": "ISO 27001 is an international standard for information security management systems. AWS has achieved ISO 27001 certification, demonstrating that AWS has implemented a systematic approach to managing sensitive company information and ensuring data security through risk management processes.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_srm_004",
+    "question": "How does the shared responsibility model apply to Amazon EC2?",
+    "ground_truth": "For Amazon EC2, which is an IaaS service, AWS manages the hypervisor and physical infrastructure while customers are responsible for the guest operating system including updates and patches, applications running on the instance, security groups and firewall configuration, and data stored on the instance.",
+    "domain": "aws_security",
+    "difficulty": "hard"
+  },
+  {
+    "id": "aws_iam_004",
+    "question": "What is multi-factor authentication in AWS IAM?",
+    "ground_truth": "Multi-factor authentication (MFA) in AWS IAM adds an extra layer of security by requiring users to provide a unique authentication code from an MFA device in addition to their password when accessing AWS. MFA can be applied to root accounts and IAM users for enhanced security.",
+    "domain": "aws_security",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_lambda_003",
+    "question": "How does AWS Lambda scale automatically?",
+    "ground_truth": "AWS Lambda automatically scales by running code in response to each trigger. When multiple events occur simultaneously, Lambda scales up by running multiple instances of the function in parallel. Lambda can scale from zero to thousands of concurrent executions within seconds without any configuration.",
+    "domain": "aws_core",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_cloudwatch_003",
+    "question": "What types of data can CloudWatch collect?",
+    "ground_truth": "CloudWatch can collect metrics (numerical data about AWS resources), logs (text-based records from applications and services), and events (records of system changes). It supports custom metrics from your own applications and provides dashboards for visualization.",
+    "domain": "aws_core",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_waf_003",
+    "question": "What is the operational excellence pillar of the AWS Well-Architected Framework?",
+    "ground_truth": "The operational excellence pillar focuses on running and monitoring systems to deliver business value and continually improving supporting processes and procedures. Key topics include automating changes, responding to events, and defining standards to manage daily operations.",
+    "domain": "aws_waf",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_sagemaker_005",
+    "question": "What built-in algorithms does SageMaker provide?",
+    "ground_truth": "SageMaker provides built-in algorithms optimized for scale and performance including XGBoost, Linear Learner, K-Means, Principal Component Analysis, Factorization Machines, and deep learning algorithms. These algorithms are optimized to run efficiently on AWS infrastructure.",
+    "domain": "aws_ml",
+    "difficulty": "hard"
+  },
+  {
+    "id": "aws_gdpr_003",
+    "question": "What rights do individuals have under GDPR?",
+    "ground_truth": "Under GDPR, individuals have the right to access their personal data, the right to rectification of inaccurate data, the right to erasure (right to be forgotten), the right to restrict processing, the right to data portability, and the right to object to processing.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_guardduty_003",
+    "question": "What types of threats does GuardDuty detect?",
+    "ground_truth": "GuardDuty detects threats including compromised EC2 instances communicating with known malicious IPs, unauthorized API calls, unusual patterns of data access in S3, account credential compromise, cryptocurrency mining activity, and reconnaissance by potential attackers.",
+    "domain": "aws_security",
+    "difficulty": "hard"
+  },
+  {
+    "id": "aws_config_002",
+    "question": "How does AWS Config help with compliance?",
+    "ground_truth": "AWS Config helps with compliance by continuously monitoring resource configurations and comparing them against desired configurations defined in Config rules. When a resource violates a rule, Config flags it as noncompliant and can trigger automated remediation actions. This creates an audit trail for compliance reporting.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_s3_004",
+    "question": "What is S3 versioning?",
+    "ground_truth": "S3 versioning is a means of keeping multiple variants of an object in the same bucket. It can be used to preserve, retrieve, and restore every version of every object stored in an S3 bucket, protecting against accidental deletion and allowing recovery from application failures.",
+    "domain": "aws_core",
+    "difficulty": "easy"
+  },
+  {
+    "id": "aws_cloudtrail_002",
+    "question": "What events does CloudTrail record?",
+    "ground_truth": "CloudTrail records management events such as API calls for creating, modifying, and deleting AWS resources, data events such as S3 object-level operations and Lambda function executions, and Insights events that identify unusual activity patterns in your account.",
+    "domain": "aws_security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_vpc_003",
+    "question": "What is the difference between a public and private subnet in a VPC?",
+    "ground_truth": "A public subnet has a route to an internet gateway, allowing resources to communicate directly with the internet. A private subnet does not have a direct route to the internet gateway — resources in private subnets can access the internet through a NAT gateway but cannot be reached directly from the internet.",
+    "domain": "aws_core",
+    "difficulty": "hard"
+  },
+  {
+    "id": "owasp_005",
+    "question": "What is broken access control in web security?",
+    "ground_truth": "Broken access control occurs when restrictions on what authenticated users are allowed to do are not properly enforced. Attackers can exploit broken access control to access unauthorized functionality or data, modify or delete data, or perform actions outside their intended permissions.",
+    "domain": "grc",
+    "difficulty": "medium"
+  },
+  {
+    "id": "aws_hipaa_003",
+    "question": "What types of data are considered Protected Health Information under HIPAA?",
+    "ground_truth": "Protected Health Information (PHI) under HIPAA includes any individually identifiable health information transmitted or maintained in any form. This includes names, geographic identifiers, dates related to health conditions, phone numbers, email addresses, Social Security numbers, medical record numbers, and any other unique identifying information combined with health data.",
+    "domain": "grc",
+    "difficulty": "hard"
+  }
+]

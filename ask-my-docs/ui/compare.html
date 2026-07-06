@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>RAG Comparison Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0A0E1A;--surface:#111827;--surface2:#1A2236;--surface3:#1E293B;
+      --border:#1F2D45;--text:#E2E8F0;--muted:#64748B;
+      --amber:#F59E0B;--violet:#8B5CF6;--green:#10B981;--red:#EF4444;--blue:#3B82F6;
+      --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+    }
+    html,body{height:100%;overflow:hidden}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex}
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .sidebar{width:210px;flex-shrink:0;background:var(--surface);
+      border-right:1px solid var(--border);display:flex;flex-direction:column;
+      height:100vh;overflow-y:auto}
+    .sb-logo{padding:16px 16px 14px;border-bottom:1px solid var(--border)}
+    .sb-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--violet));
+      border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px}
+    .sb-logo-title{font-size:12px;font-weight:700}
+    .sb-logo-sub{font-size:10px;color:var(--muted);margin-top:1px}
+
+    /* Dataset selector */
+    .ds-section{padding:12px 10px 6px}
+    .ds-label{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;
+      font-family:var(--mono);padding:2px 6px 8px}
+    .ds-card{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:8px;
+      cursor:pointer;transition:all .15s;margin-bottom:3px;border:1px solid transparent}
+    .ds-card:hover{background:var(--surface2)}
+    .ds-card.active{background:var(--surface2);border-color:var(--border)}
+    .ds-card.loading-card{opacity:.5;cursor:wait}
+    .ds-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+    .ds-info{min-width:0}
+    .ds-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ds-count{font-size:9px;color:var(--muted);font-family:var(--mono)}
+    .ds-active-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-left:auto;display:none}
+    .ds-card.active .ds-active-dot{display:block}
+
+    .add-dataset-btn{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;
+      cursor:pointer;transition:all .15s;margin:4px 10px;font-size:11px;
+      color:var(--muted);border:1px dashed var(--border);justify-content:center}
+    .add-dataset-btn:hover{color:var(--text);border-color:var(--blue)}
+
+    /* System legend */
+    .sb-section{padding:0 10px;margin-top:4px}
+    .sb-label2{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;
+      font-family:var(--mono);padding:8px 6px 6px}
+    .leg{display:flex;align-items:center;gap:7px;padding:5px 6px;font-size:10px;color:var(--muted);font-family:var(--mono)}
+    .leg-dot{width:7px;height:7px;border-radius:50%}
+
+    .sb-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+    .active-ds-label{font-size:10px;color:var(--muted);font-family:var(--mono)}
+    .active-ds-name{font-size:11px;color:var(--text);font-weight:600;margin-top:2px}
+    .active-ds-chunks{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+
+    /* ── Main ────────────────────────────────────────── */
+    .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;padding:12px 16px}
+
+    .topbar{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-shrink:0}
+    .topbar-title{font-size:15px;font-weight:700;letter-spacing:-.02em}
+    .topbar-sub{font-size:11px;color:var(--muted);margin-top:1px}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+      animation:pulse 2s infinite;margin-left:auto;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.4)}
+      50%{opacity:.7;box-shadow:0 0 0 5px rgba(16,185,129,0)}}
+    .status-label{font-size:10px;color:var(--green);font-family:var(--mono)}
+
+    .search-row-wrap{display:flex;gap:8px;margin-bottom:7px;flex-shrink:0;align-items:center}
+    .search-row-wrap input{flex:1;background:var(--surface);border:1px solid var(--border);
+      border-radius:8px;padding:9px 14px;color:var(--text);font-family:var(--mono);
+      font-size:12px;outline:none;transition:border-color .15s}
+    .search-row-wrap input:focus{border-color:var(--blue)}
+    .search-row-wrap input::placeholder{color:var(--muted)}
+    .run-btn{background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;
+      border:none;border-radius:8px;padding:9px 20px;font-family:var(--mono);
+      font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+      transition:opacity .15s,transform .1s}
+    .run-btn:hover{opacity:.88}.run-btn:active{transform:scale(.97)}
+    .run-btn:disabled{opacity:.35;cursor:not-allowed}
+
+    .suggestions{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;flex-shrink:0}
+    .suggestion{font-size:10px;color:var(--muted);background:var(--surface);
+      border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;transition:all .15s}
+    .suggestion:hover{color:var(--text);border-color:var(--blue)}
+
+    .err-bar{display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+      border-radius:7px;padding:7px 12px;font-size:11px;color:#FCA5A5;margin-bottom:7px;flex-shrink:0}
+    .err-bar.visible{display:block}
+
+    /* Loading overlay for dataset switch */
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,14,26,.85);
+      z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+    .loading-overlay.visible{display:flex}
+    .loading-spinner{width:36px;height:36px;border:3px solid var(--border);
+      border-top-color:var(--violet);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{font-family:var(--mono);font-size:13px;color:var(--text)}
+    .loading-sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+    /* Summary row */
+    .sum-row{display:flex;gap:8px;margin-bottom:8px;flex-shrink:0}
+    .sum-card{flex:1;background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:9px}
+    .sum-icon{font-size:16px;flex-shrink:0}
+    .sum-winner{font-size:11px;font-weight:600}
+    .sum-winner.amber{color:var(--amber)}.sum-winner.violet{color:var(--violet)}.sum-winner.tie{color:var(--muted)}
+    .sum-desc{font-size:10px;color:var(--muted);margin-top:1px}
+
+    /* Dashboard grid */
+    .dashboard{flex:1;display:grid;min-height:0;
+      grid-template-columns:repeat(6,1fr);
+      grid-template-rows:auto 1fr;
+      gap:8px}
+
+    /* Gauge cards */
+    .gauge-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+      padding:10px;display:flex;flex-direction:column;align-items:center;min-height:0}
+    .gauge-title{font-size:9px;color:var(--muted);font-family:var(--mono);
+      letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;text-align:center;width:100%}
+    .gauge-wrap{position:relative;width:86px;height:86px;margin-bottom:6px;flex-shrink:0}
+    .gauge-svg{width:86px;height:86px;transform:rotate(-90deg)}
+    .gauge-track{fill:none;stroke:var(--surface2);stroke-width:7}
+    .gauge-fill{fill:none;stroke-width:7;stroke-linecap:round;
+      transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)}
+    .gauge-fill.amber{stroke:var(--amber)}.gauge-fill.violet{stroke:var(--violet)}
+    .gauge-fill.green{stroke:var(--green)}.gauge-fill.red{stroke:var(--red)}.gauge-fill.blue{stroke:var(--blue)}
+    .gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+    .gauge-val{font-family:var(--mono);font-size:13px;font-weight:700;line-height:1}
+    .gauge-unit{font-size:8px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+    .gauge-legend{width:100%;display:flex;flex-direction:column;gap:3px}
+    .gauge-legend-row{display:flex;align-items:center;justify-content:space-between;font-size:9.5px}
+    .gauge-legend-label{display:flex;align-items:center;gap:4px;color:var(--muted)}
+    .gauge-legend-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+    .gauge-legend-val{font-family:var(--mono);font-size:9.5px;font-weight:600}
+    .gauge-legend-val.amber{color:var(--amber)}.gauge-legend-val.violet{color:var(--violet)}
+
+    /* Answer panels */
+    .answer-panel{background:var(--surface);border-radius:11px;overflow:hidden;
+      display:flex;flex-direction:column;min-height:0;grid-column:span 3}
+    .answer-panel.amber-panel{border:1px solid rgba(245,158,11,.3)}
+    .answer-panel.violet-panel{border:1px solid rgba(139,92,246,.3)}
+    .panel-hdr{padding:9px 13px;display:flex;align-items:center;gap:7px;
+      border-bottom:1px solid var(--border);flex-shrink:0}
+    .panel-hdr.amber-h{background:rgba(245,158,11,.06)}.panel-hdr.violet-h{background:rgba(139,92,246,.06)}
+    .panel-name{font-family:var(--mono);font-size:11px;font-weight:600}
+    .panel-name.amber{color:var(--amber)}.panel-name.violet{color:var(--violet)}
+    .panel-sub{font-size:10px;color:var(--muted);margin-left:3px}
+    .panel-badge{margin-left:auto;font-size:9px;font-family:var(--mono);
+      padding:2px 8px;border-radius:20px;font-weight:600}
+    .panel-badge.ok{background:rgba(16,185,129,.15);color:var(--green)}
+    .panel-badge.declined{background:rgba(239,68,68,.15);color:var(--red)}
+    .trace-bar{padding:6px 13px;border-bottom:1px solid var(--border);
+      display:flex;gap:0;flex-shrink:0;flex-wrap:wrap}
+    .tstep{display:flex;align-items:center;gap:4px;font-size:9px;font-family:var(--mono);color:var(--muted)}
+    .tstep+.tstep::before{content:'→';margin-right:4px;color:var(--border)}
+    .tstep-dot{width:5px;height:5px;border-radius:50%}
+    .tstep.da{color:var(--amber)}.tstep.da .tstep-dot{background:var(--amber)}
+    .tstep.dv{color:var(--violet)}.tstep.dv .tstep-dot{background:var(--violet)}
+    .panel-body{padding:11px 13px;font-size:12.5px;line-height:1.75;
+      color:var(--text);flex:1;overflow-y:auto;min-height:0}
+    .panel-body::-webkit-scrollbar{width:3px}
+    .panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .panel-sources{padding:7px 13px;border-top:1px solid var(--border);flex-shrink:0}
+    .src-label{font-size:9px;color:var(--muted);font-family:var(--mono);
+      letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px}
+    .src-chip{display:inline-flex;align-items:center;font-size:10px;font-family:var(--mono);
+      color:var(--muted);background:var(--surface2);border:1px solid var(--border);
+      border-radius:4px;padding:2px 7px;margin:1px 2px;text-decoration:none;transition:all .15s}
+    .src-chip:hover{color:var(--text);border-color:var(--blue)}
+    .crag-chips{padding:6px 13px;border-top:1px solid var(--border);
+      display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0}
+    .cc{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px}
+    .cc.kept{background:rgba(16,185,129,.12);color:var(--green)}
+    .cc.filtered{background:rgba(239,68,68,.12);color:var(--red)}
+    .cc.rewrite{background:rgba(59,130,246,.12);color:var(--blue)}
+    .sk{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);
+      background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* Custom dataset modal */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(10,14,26,.8);z-index:300;
+      align-items:center;justify-content:center}
+    .modal-bg.visible{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:24px;width:500px;max-width:90vw}
+    .modal-title{font-size:15px;font-weight:700;margin-bottom:4px}
+    .modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+    .modal label{font-size:11px;color:var(--muted);font-family:var(--mono);
+      letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:5px}
+    .modal input,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border);
+      border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--mono);
+      font-size:12px;outline:none;transition:border-color .15s;margin-bottom:14px}
+    .modal input:focus,.modal textarea:focus{border-color:var(--blue)}
+    .modal textarea{height:100px;resize:vertical;font-size:11px;line-height:1.6}
+    .modal-hint{font-size:10px;color:var(--muted);margin-top:-10px;margin-bottom:14px}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end}
+    .modal-cancel{background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+      border-radius:7px;padding:8px 16px;cursor:pointer;font-size:12px;font-family:var(--mono)}
+    .modal-cancel:hover{color:var(--text)}
+    .modal-submit{background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;
+      border:none;border-radius:7px;padding:8px 20px;cursor:pointer;font-size:12px;
+      font-family:var(--mono);font-weight:600}
+    .modal-submit:disabled{opacity:.4;cursor:not-allowed}
+
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay for dataset switch -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Switching dataset...</div>
+  <div class="loading-sub" id="loadingSub">Fetching and indexing documents</div>
+</div>
+
+<!-- Custom dataset modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-title">Add Custom Dataset</div>
+    <div class="modal-sub">Paste URLs to any public documentation pages and build a custom corpus</div>
+    <label>Dataset Name</label>
+    <input type="text" id="customName" placeholder="e.g. Stripe API Docs" maxlength="50"/>
+    <label>Description</label>
+    <input type="text" id="customDesc" placeholder="e.g. Stripe payment processing documentation" maxlength="120"/>
+    <label>URLs (one per line, max 30)</label>
+    <textarea id="customUrls" placeholder="https://docs.stripe.com/payments&#10;https://docs.stripe.com/api&#10;https://docs.stripe.com/webhooks"></textarea>
+    <div class="modal-hint">Tip: Use documentation pages, not homepages. Each URL will be scraped for text content.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modalCancel">Cancel</button>
+      <button class="modal-submit" id="modalSubmit">Add & Index Dataset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">🔬</div>
+    <div class="sb-logo-title">RAG Lab</div>
+    <div class="sb-logo-sub">Comparison Dashboard</div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-label">Datasets</div>
+    <div id="datasetList"></div>
+    <div class="add-dataset-btn" id="addDatasetBtn">＋ Custom Dataset</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label2">Systems</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Standard RAG</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--violet)"></div>Corrective RAG</div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="active-ds-label">Active Dataset</div>
+    <div class="active-ds-name" id="footerDsName">—</div>
+    <div class="active-ds-chunks" id="footerDsChunks">—</div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">RAG Comparison Lab</div>
+      <div class="topbar-sub">Standard vs Corrective — same question, any dataset</div>
+    </div>
+    <div class="status-dot"></div>
+    <div class="status-label">Live</div>
+  </div>
+
+  <div class="search-row-wrap">
+    <input type="text" id="queryInput" placeholder="Ask a question about the active dataset..."/>
+    <button class="run-btn" id="runBtn">▶ Run Comparison</button>
+  </div>
+  <div class="suggestions" id="suggestions"></div>
+  <div class="err-bar" id="errorBar"></div>
+
+  <!-- Summary -->
+  <div class="sum-row">
+    <div class="sum-card"><div class="sum-icon">🎯</div><div><div class="sum-winner tie" id="sw1">—</div><div class="sum-desc" id="sd1">More accurate context</div></div></div>
+    <div class="sum-card"><div class="sum-icon">⚡</div><div><div class="sum-winner tie" id="sw2">—</div><div class="sum-desc" id="sd2">Faster response</div></div></div>
+    <div class="sum-card"><div class="sum-icon">💰</div><div><div class="sum-winner tie" id="sw3">—</div><div class="sum-desc" id="sd3">Fewer tokens</div></div></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+
+    <!-- Latency gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">⏱ Latency</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill amber" id="g-la" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill violet" id="g-lv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-l">—</div><div class="gauge-unit">ms diff</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--amber)"></div>Std</div><div class="gauge-legend-val amber" id="gl-sl">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--violet)"></div>Cor</div><div class="gauge-legend-val violet" id="gl-cl">—</div></div>
+      </div>
+    </div>
+
+    <!-- Tokens gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">🔤 Tokens</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill amber" id="g-ta" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill violet" id="g-tv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-t">—</div><div class="gauge-unit">total</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--amber)"></div>Std</div><div class="gauge-legend-val amber" id="gl-st">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--violet)"></div>Cor</div><div class="gauge-legend-val violet" id="gl-ct">—</div></div>
+      </div>
+    </div>
+
+    <!-- Confidence gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">🎯 Confidence</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill amber" id="g-ca" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill violet" id="g-cv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-c">—</div><div class="gauge-unit">avg %</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--amber)"></div>Std</div><div class="gauge-legend-val amber" id="gl-sc">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--violet)"></div>Cor</div><div class="gauge-legend-val violet" id="gl-cc">—</div></div>
+      </div>
+    </div>
+
+    <!-- Precision gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">📦 Precision</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill amber" id="g-pa" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill violet" id="g-pv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-p">—</div><div class="gauge-unit">cited/used</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--amber)"></div>Std</div><div class="gauge-legend-val amber" id="gl-sp">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--violet)"></div>Cor</div><div class="gauge-legend-val violet" id="gl-cp">—</div></div>
+      </div>
+    </div>
+
+    <!-- cRAG actions gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">🔍 cRAG</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill red" id="g-fa" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill green" id="g-fv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-f" style="color:var(--red)">—</div><div class="gauge-unit">filtered</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--green)"></div>Kept</div><div class="gauge-legend-val" id="gl-fk" style="color:var(--green)">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--red)"></div>Filtered</div><div class="gauge-legend-val" id="gl-ff" style="color:var(--red)">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--blue)"></div>Rewrites</div><div class="gauge-legend-val" id="gl-fr" style="color:var(--blue)">—</div></div>
+      </div>
+    </div>
+
+    <!-- Status gauge -->
+    <div class="gauge-card">
+      <div class="gauge-title">🚫 Status</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 86 86">
+          <circle class="gauge-track" cx="43" cy="43" r="34"/>
+          <circle class="gauge-fill amber" id="g-sa" cx="43" cy="43" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          <circle class="gauge-fill violet" id="g-sv" cx="43" cy="43" r="26" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-width="6"/>
+        </svg>
+        <div class="gauge-center"><div class="gauge-val" id="gv-s" style="font-size:10px">—</div></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--amber)"></div>Std</div><div class="gauge-legend-val" id="gl-ss">—</div></div>
+        <div class="gauge-legend-row"><div class="gauge-legend-label"><div class="gauge-legend-dot" style="background:var(--violet)"></div>Cor</div><div class="gauge-legend-val" id="gl-cs">—</div></div>
+      </div>
+    </div>
+
+    <!-- Standard RAG answer -->
+    <div class="answer-panel amber-panel">
+      <div class="panel-hdr amber-h">
+        <div class="panel-name amber">Standard RAG</div>
+        <div class="panel-sub">hybrid retrieval + reranking</div>
+        <div class="panel-badge" id="std-badge">—</div>
+      </div>
+      <div class="trace-bar">
+        <div class="tstep" id="st1"><div class="tstep-dot"></div>Retrieve</div>
+        <div class="tstep" id="st2"><div class="tstep-dot"></div>Rerank</div>
+        <div class="tstep" id="st3"><div class="tstep-dot"></div>Generate</div>
+      </div>
+      <div class="panel-body" id="std-answer">
+        <div class="sk" style="height:12px;width:92%;margin-bottom:8px"></div>
+        <div class="sk" style="height:12px;width:80%;margin-bottom:8px"></div>
+        <div class="sk" style="height:12px;width:87%"></div>
+      </div>
+      <div class="panel-sources" id="std-sources" style="display:none">
+        <div class="src-label">Sources cited</div>
+        <div id="std-src-list"></div>
+      </div>
+    </div>
+
+    <!-- Corrective RAG answer -->
+    <div class="answer-panel violet-panel">
+      <div class="panel-hdr violet-h">
+        <div class="panel-name violet">Corrective RAG</div>
+        <div class="panel-sub">+ chunk grading + query rewrite</div>
+        <div class="panel-badge" id="cor-badge">—</div>
+      </div>
+      <div class="trace-bar">
+        <div class="tstep" id="ct1"><div class="tstep-dot"></div>Retrieve</div>
+        <div class="tstep" id="ct2"><div class="tstep-dot"></div>Rerank</div>
+        <div class="tstep" id="ct3"><div class="tstep-dot"></div>Grade</div>
+        <div class="tstep" id="ct4"><div class="tstep-dot"></div>Generate</div>
+      </div>
+      <div class="panel-body" id="cor-answer">
+        <div class="sk" style="height:12px;width:92%;margin-bottom:8px"></div>
+        <div class="sk" style="height:12px;width:80%;margin-bottom:8px"></div>
+        <div class="sk" style="height:12px;width:87%"></div>
+      </div>
+      <div class="panel-sources" id="cor-sources" style="display:none">
+        <div class="src-label">Sources cited</div>
+        <div id="cor-src-list"></div>
+      </div>
+      <div class="crag-chips" id="cor-chips" style="display:none"></div>
+    </div>
+
+  </div><!-- /dashboard -->
+</main>
+
+<script>
+  // ── Gauge helpers ─────────────────────────────────────────
+  // r=34 → C=213.6  r=26 → C=163.4
+  const CO=213.6,CI=163.4;
+
+  function sg(id,pct,c){
+    const el=document.getElementById(id);if(!el)return;
+    setTimeout(()=>{el.style.strokeDashoffset=c*(1-Math.min(pct,1))},80);
+  }
+  function aNum(el,target,sfx='',dur=600){
+    if(!el)return;const s=performance.now();
+    function step(n){const p=Math.min((n-s)/dur,1),e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(target*e)+sfx;if(p<1)requestAnimationFrame(step);}
+    requestAnimationFrame(step);
+  }
+  function fmtCite(t){
+    return t.replace(/\[Source (\d+)\]/g,
+      '<span style="display:inline-block;font-family:var(--mono);font-size:9px;color:var(--blue);background:rgba(59,130,246,.1);border-radius:3px;padding:0 4px;margin:0 1px">[S$1]</span>');
+  }
+  function resetGauges(){
+    ['g-la','g-lv','g-ta','g-tv','g-ca','g-cv','g-pa','g-pv','g-fa','g-fv','g-sa','g-sv'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.strokeDashoffset=el.getAttribute('r')==='34'?CO:CI;
+    });
+    ['gv-l','gv-t','gv-c','gv-p','gv-f','gv-s'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+  }
+
+  // ── Dataset management ────────────────────────────────────
+  let activeDatasetId = null;
+  let allDatasets = {};
+
+  async function loadDatasets(){
+    const res = await fetch('/api/datasets');
+    const data = await res.json();
+    activeDatasetId = data.active;
+    allDatasets = {};
+    data.datasets.forEach(d => { allDatasets[d.id] = d; });
+    renderDatasetList(data.datasets, data.active);
+    updateFooter(allDatasets[data.active]);
+    loadSuggestions();
+  }
+
+  function renderDatasetList(datasets, activeId){
+    const list = document.getElementById('datasetList');
+    list.innerHTML = '';
+    datasets.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'ds-card' + (d.id === activeId ? ' active' : '');
+      card.dataset.id = d.id;
+      card.innerHTML = `
+        <div class="ds-icon">${d.icon}</div>
+        <div class="ds-info">
+          <div class="ds-name">${d.name}</div>
+          <div class="ds-count">${d.source_count} sources${d.is_custom ? ' · custom' : ''}</div>
+        </div>
+        <div class="ds-active-dot" style="background:${d.color}"></div>
+      `;
+      card.addEventListener('click', () => switchDataset(d.id));
+      list.appendChild(card);
+    });
+  }
+
+  function updateFooter(dataset){
+    if(!dataset) return;
+    document.getElementById('footerDsName').textContent = dataset.name;
+    document.getElementById('footerDsChunks').textContent = dataset.source_count + ' sources indexed';
+  }
+
+  async function switchDataset(datasetId){
+    if(datasetId === activeDatasetId) return;
+    const ds = allDatasets[datasetId];
+    if(!ds) return;
+
+    // Show loading overlay
+    document.getElementById('loadingText').textContent = `Loading ${ds.name}...`;
+    document.getElementById('loadingSub').textContent = `Fetching ${ds.source_count} sources and building indexes`;
+    document.getElementById('loadingOverlay').classList.add('visible');
+
+    // Grey out dataset cards
+    document.querySelectorAll('.ds-card').forEach(c => c.classList.add('loading-card'));
+
+    try {
+      const res = await fetch('/api/switch-dataset', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({dataset_id: datasetId})
+      });
+      if(!res.ok){ const e=await res.json(); throw new Error(e.detail||'Switch failed'); }
+      const data = await res.json();
+
+      activeDatasetId = datasetId;
+      document.getElementById('footerDsName').textContent = ds.name;
+      document.getElementById('footerDsChunks').textContent = `${data.chunks_indexed} chunks indexed`;
+
+      // Update sidebar active state
+      document.querySelectorAll('.ds-card').forEach(c => {
+        c.classList.remove('active','loading-card');
+        if(c.dataset.id === datasetId) c.classList.add('active');
+      });
+
+      // Reset answers and reload suggestions
+      resetAnswers();
+      resetGauges();
+      loadSuggestions();
+
+      document.getElementById('queryInput').placeholder = `Ask a question about ${ds.name}...`;
+
+    } catch(e){
+      document.getElementById('errorBar').textContent = '⚠ ' + e.message;
+      document.getElementById('errorBar').className = 'err-bar visible';
+      document.querySelectorAll('.ds-card').forEach(c => c.classList.remove('loading-card'));
+    }
+
+    document.getElementById('loadingOverlay').classList.remove('visible');
+  }
+
+  // ── Custom dataset modal ──────────────────────────────────
+  document.getElementById('addDatasetBtn').addEventListener('click', () => {
+    document.getElementById('modalBg').classList.add('visible');
+  });
+  document.getElementById('modalCancel').addEventListener('click', () => {
+    document.getElementById('modalBg').classList.remove('visible');
+  });
+  document.getElementById('modalSubmit').addEventListener('click', async () => {
+    const name = document.getElementById('customName').value.trim();
+    const desc = document.getElementById('customDesc').value.trim();
+    const urlsRaw = document.getElementById('customUrls').value.trim();
+    const urls = urlsRaw.split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+
+    if(!name){ alert('Please enter a dataset name.'); return; }
+    if(!urls.length){ alert('Please enter at least one valid URL.'); return; }
+
+    const btn = document.getElementById('modalSubmit');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    try {
+      const res = await fetch('/api/add-custom-dataset', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({name, description: desc, urls})
+      });
+      if(!res.ok){ const e=await res.json(); throw new Error(e.detail||'Failed'); }
+      const data = await res.json();
+
+      document.getElementById('modalBg').classList.remove('visible');
+      document.getElementById('customName').value = '';
+      document.getElementById('customDesc').value = '';
+      document.getElementById('customUrls').value = '';
+
+      // Reload datasets and switch to the new one
+      await loadDatasets();
+      await switchDataset(data.dataset_id);
+
+    } catch(e){ alert('Error: ' + e.message); }
+
+    btn.disabled = false; btn.textContent = 'Add & Index Dataset';
+  });
+
+  // ── Suggestions ───────────────────────────────────────────
+  async function loadSuggestions(){
+    try {
+      const res = await fetch('/api/suggestions');
+      const data = await res.json();
+      const c = document.getElementById('suggestions');
+      c.innerHTML = '';
+      data.questions.slice(0,6).forEach(q => {
+        const b = document.createElement('button');
+        b.className = 'suggestion'; b.textContent = q;
+        b.onclick = () => { document.getElementById('queryInput').value = q; run(); };
+        c.appendChild(b);
+      });
+    } catch(e){}
+  }
+
+  // ── Trace animation ───────────────────────────────────────
+  function animTrace(prefix,count,cls){
+    for(let i=1;i<=count;i++){
+      setTimeout(()=>{
+        const el=document.getElementById(prefix+'t'+i);
+        if(el){el.classList.add(cls);el.querySelector('.tstep-dot').style.background=cls==='da'?'var(--amber)':'var(--violet)';}
+      },(i-1)*300);
+    }
+  }
+
+  // ── Render panel ──────────────────────────────────────────
+  function renderPanel(data,prefix){
+    const badge=document.getElementById(prefix+'-badge');
+    const ansEl=document.getElementById(prefix+'-answer');
+    const srcEl=document.getElementById(prefix+'-sources');
+    const srcList=document.getElementById(prefix+'-src-list');
+    badge.textContent=data.declined?'declined':'answered';
+    badge.className='panel-badge '+(data.declined?'declined':'ok');
+    ansEl.innerHTML=fmtCite(data.answer);
+    if(data.sources?.length){
+      srcEl.style.display='block';
+      data.sources.forEach(s=>{
+        const a=document.createElement('a');a.className='src-chip';
+        a.href=s.url;a.target='_blank';a.rel='noopener';
+        a.textContent=`[${s.index}] ${s.title.slice(0,28)}${s.title.length>28?'…':''}`;
+        srcList.appendChild(a);
+      });
+    }
+    if(prefix==='cor'){
+      const chips=document.getElementById('cor-chips');
+      const m=data.metrics;
+      if(m.chunks_kept>0||m.chunks_filtered>0||m.query_rewrites>0){
+        chips.style.display='flex';
+        if(m.chunks_kept>0) chips.innerHTML+=`<span class="cc kept">✓ ${m.chunks_kept} kept</span>`;
+        if(m.chunks_filtered>0) chips.innerHTML+=`<span class="cc filtered">✗ ${m.chunks_filtered} filtered</span>`;
+        if(m.query_rewrites>0) chips.innerHTML+=`<span class="cc rewrite">↻ ${m.query_rewrites} rewrite</span>`;
+        if(m.rewritten_query) chips.innerHTML+=`<span class="cc rewrite" title="${m.rewritten_query}">→ "${m.rewritten_query.slice(0,28)}…"</span>`;
+      }
+    }
+  }
+
+  // ── Render metrics ────────────────────────────────────────
+  function renderMetrics(data){
+    const s=data.standard.metrics,c=data.corrective.metrics;
+    const mxL=Math.max(s.latency_ms,c.latency_ms,1);
+    sg('g-la',s.latency_ms/mxL,CO);sg('g-lv',c.latency_ms/mxL,CI);
+    aNum(document.getElementById('gv-l'),Math.abs(s.latency_ms-c.latency_ms),'ms');
+    document.getElementById('gl-sl').textContent=s.latency_ms+'ms';
+    document.getElementById('gl-cl').textContent=c.latency_ms+'ms';
+    const mxT=Math.max(s.total_tokens,c.total_tokens,1);
+    sg('g-ta',s.total_tokens/mxT,CO);sg('g-tv',c.total_tokens/mxT,CI);
+    aNum(document.getElementById('gv-t'),Math.max(s.total_tokens,c.total_tokens));
+    document.getElementById('gl-st').textContent=s.total_tokens;
+    document.getElementById('gl-ct').textContent=c.total_tokens;
+    const sc=data.standard.confidence,cc2=data.corrective.confidence;
+    sg('g-ca',sc,CO);sg('g-cv',cc2,CI);
+    aNum(document.getElementById('gv-c'),Math.round(((sc+cc2)/2)*100),'%');
+    document.getElementById('gl-sc').textContent=Math.round(sc*100)+'%';
+    document.getElementById('gl-cc').textContent=Math.round(cc2*100)+'%';
+    const sp=s.chunks_reranked>0?s.chunks_cited/s.chunks_reranked:0;
+    const cp=c.chunks_kept>0?c.chunks_cited/c.chunks_kept:0;
+    sg('g-pa',sp,CO);sg('g-pv',cp,CI);
+    aNum(document.getElementById('gv-p'),Math.round(((sp+cp)/2)*100),'%');
+    document.getElementById('gl-sp').textContent=`${s.chunks_cited}/${s.chunks_reranked}`;
+    document.getElementById('gl-cp').textContent=`${c.chunks_cited}/${c.chunks_kept}`;
+    const tot=c.chunks_kept+c.chunks_filtered||1;
+    sg('g-fa',c.chunks_filtered/tot,CO);sg('g-fv',c.chunks_kept/tot,CI);
+    aNum(document.getElementById('gv-f'),c.chunks_filtered);
+    document.getElementById('gl-fk').textContent=c.chunks_kept;
+    document.getElementById('gl-ff').textContent=c.chunks_filtered;
+    document.getElementById('gl-fr').textContent=c.query_rewrites;
+    const sA=!data.standard.declined,cA=!data.corrective.declined;
+    sg('g-sa',sA?1:0,CO);sg('g-sv',cA?1:0,CI);
+    document.getElementById('gv-s').textContent=(sA&&cA)?'Both ✓':sA||cA?'Partial':'Both ✗';
+    const ss=document.getElementById('gl-ss'),cs=document.getElementById('gl-cs');
+    ss.textContent=sA?'Answered':'Declined';ss.style.color=sA?'var(--green)':'var(--red)';
+    cs.textContent=cA?'Answered':'Declined';cs.style.color=cA?'var(--green)':'var(--red)';
+    const diff=Math.abs(s.latency_ms-c.latency_ms);
+    [{w:c.chunks_filtered>0?'violet':'tie',n:c.chunks_filtered>0?'Corrective RAG':'Tie',d:c.chunks_filtered>0?`Filtered ${c.chunks_filtered} chunk(s)`:'Same quality',ids:['sw1','sd1']},
+     {w:s.latency_ms<=c.latency_ms?'amber':'violet',n:s.latency_ms<=c.latency_ms?'Standard RAG':'Corrective RAG',d:diff===0?'Same speed':diff+'ms faster',ids:['sw2','sd2']},
+     {w:s.total_tokens<=c.total_tokens?'amber':'violet',n:s.total_tokens<=c.total_tokens?'Standard RAG':'Corrective RAG',d:Math.abs(s.total_tokens-c.total_tokens)+' token diff',ids:['sw3','sd3']}
+    ].forEach(x=>{
+      const we=document.getElementById(x.ids[0]),de=document.getElementById(x.ids[1]);
+      we.textContent=x.n;we.className='sum-winner '+x.w;de.textContent=x.d;
+    });
+  }
+
+  function resetAnswers(){
+    ['std','cor'].forEach(p=>{
+      document.getElementById(p+'-answer').innerHTML='<div class="sk" style="height:12px;width:92%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:80%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:87%"></div>';
+      document.getElementById(p+'-badge').textContent='—';
+      document.getElementById(p+'-badge').className='panel-badge';
+      const src=document.getElementById(p+'-sources');
+      if(src){src.style.display='none';document.getElementById(p+'-src-list').innerHTML='';}
+      ['sw1','sw2','sw3'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent='—';e.className='sum-winner tie';}});
+    });
+    document.getElementById('cor-chips').style.display='none';
+    document.getElementById('cor-chips').innerHTML='';
+  }
+
+  // ── Main run function ─────────────────────────────────────
+  async function run(){
+    const q=document.getElementById('queryInput').value.trim();if(!q)return;
+    const btn=document.getElementById('runBtn'),eb=document.getElementById('errorBar');
+    btn.disabled=true;btn.textContent='⏳ Running…';eb.className='err-bar';
+    resetAnswers();resetGauges();
+    animTrace('s',3,'da');animTrace('c',4,'dv');
+    try{
+      const res=await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+      if(!res.ok){const e=await res.json();throw new Error(e.detail||'Server error');}
+      const data=await res.json();
+      renderPanel(data.standard,'std');renderPanel(data.corrective,'cor');renderMetrics(data);
+    }catch(e){eb.textContent='⚠ '+(e.message||'Something went wrong.');eb.className='err-bar visible';}
+    btn.disabled=false;btn.textContent='▶ Run Comparison';
+  }
+
+  document.getElementById('runBtn').addEventListener('click',run);
+  document.getElementById('queryInput').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+
+  // ── Init ──────────────────────────────────────────────────
+  loadDatasets();
+</script>
+</body>
+</html>

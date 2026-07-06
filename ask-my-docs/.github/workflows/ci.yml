@@ -1,0 +1,135 @@
+name: RAG CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Job 1: Unit Tests (no API, runs on every push) ────────────────────────
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run core unit tests
+        run: python -m pytest tests/test_core.py -v --tb=short
+
+      - name: Validate prompt config schema
+        run: |
+          python -c "
+          import yaml
+          with open('config/prompts.yaml') as f:
+              cfg = yaml.safe_load(f)
+          required = ['answer_with_citations', 'insufficient_context', 'relevance_check']
+          for key in required:
+              assert key in cfg['prompts'], f'Missing prompt: {key}'
+              assert 'version' in cfg['prompts'][key], f'Missing version in: {key}'
+              assert 'template' in cfg['prompts'][key], f'Missing template in: {key}'
+          print('Prompt config valid:', cfg['version'])
+          "
+
+      - name: Validate golden dataset schema
+        run: |
+          python -c "
+          import json
+          with open('evaluation/golden_dataset.json') as f:
+              dataset = json.load(f)
+          required_fields = ['id', 'question', 'ground_truth', 'domain', 'difficulty']
+          for item in dataset:
+              for field in required_fields:
+                  assert field in item, f'Missing field {field} in item {item.get(\"id\")}'
+          valid_domains = {'aws_core', 'aws_security', 'aws_waf', 'aws_ml', 'grc'}
+          for item in dataset:
+              assert item['domain'] in valid_domains, f'Invalid domain: {item[\"domain\"]}'
+          print(f'Golden dataset valid: {len(dataset)} questions across {len(valid_domains)} domains')
+          "
+
+  # ── Job 2: Faithfulness Eval (runs on PRs to main only) ───────────────────
+  faithfulness-eval:
+    name: Faithfulness Evaluation
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    # Only run eval on PRs targeting main — saves API costs on dev pushes
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt ragas langchain-openai datasets
+
+      - name: Build corpus indexes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python ingest.py
+
+      - name: Run faithfulness evaluation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # Sample 20 questions in CI to keep costs low (~$0.05 per run)
+        # Full 50-question eval can be run manually or on release
+        run: python scripts/eval.py --sample 20 --fail-threshold 0.75
+
+      - name: Upload evaluation report
+        uses: actions/upload-artifact@v4
+        if: always()  # upload even if eval fails so you can inspect results
+        with:
+          name: eval-report-${{ github.sha }}
+          path: evaluation/results/latest.json
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('evaluation/results/latest.json', 'utf8'));
+            const passed = report.passed;
+            const score = report.overall_faithfulness.toFixed(3);
+            const threshold = report.threshold;
+            const icon = passed ? '✅' : '❌';
+            const status = passed ? 'PASSED' : 'FAILED';
+
+            let domainRows = Object.entries(report.per_domain)
+              .map(([d, s]) => `| ${d} | ${s.toFixed(3)} |`)
+              .join('\n');
+
+            const body = `## ${icon} RAG Faithfulness Eval — ${status}
+
+            **Score: ${score}** (threshold: ${threshold})
+            Questions evaluated: ${report.total_questions} (${report.declined_count} declined)
+
+            ### By Domain
+            | Domain | Faithfulness |
+            |--------|-------------|
+            ${domainRows}
+
+            ${!passed ? `> ⚠️ **This PR reduces faithfulness below the ${threshold} threshold. Please investigate the worst-performing questions before merging.**` : ''}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
